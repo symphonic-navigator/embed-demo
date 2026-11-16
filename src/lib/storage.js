@@ -23,16 +23,34 @@ export async function openStore(name = 'embed-demo') {
   const objects = (mode) => db.transaction(STORE, mode).objectStore(STORE)
   const inCollection = (collection) => request(objects('readonly').index('collection').getAll(collection))
 
+  // Writes resolve only once the transaction has committed, so a failure at
+  // commit time (for example a full disk quota) is not reported as success.
+  const write = (work) =>
+    new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite')
+      let result
+      Promise.resolve(work(tx.objectStore(STORE))).then((r) => (result = r), reject)
+      tx.oncomplete = () => resolve(result)
+      tx.onerror = () => reject(tx.error)
+      tx.onabort = () => reject(tx.error)
+    })
+
   return {
-    add: (collection, entry) => request(objects('readwrite').add({ ...entry, collection })),
+    add: (collection, entry) => write((store) => request(store.add({ ...entry, collection }))),
     // getAll on the index returns entries in key order, i.e. insertion order.
     list: inCollection,
-    remove: (id) => request(objects('readwrite').delete(id)),
-    async clear(collection) {
-      const keys = await request(objects('readonly').index('collection').getAllKeys(collection))
-      const store = objects('readwrite')
-      await Promise.all(keys.map((key) => request(store.delete(key))))
-    },
+    remove: (id) => write((store) => store.delete(id)),
+    clear: (collection) =>
+      write((store) => {
+        const cursors = store.index('collection').openKeyCursor(collection)
+        cursors.onsuccess = () => {
+          const cursor = cursors.result
+          if (cursor) {
+            store.delete(cursor.primaryKey)
+            cursor.continue()
+          }
+        }
+      }),
     async hasSource(collection, sourceId) {
       return (await inCollection(collection)).some((e) => e.sourceId === sourceId)
     },

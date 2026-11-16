@@ -4,7 +4,7 @@ import { MAX_TEXT_LENGTH, TatoebaError, fetchRandomSentences, parseTatoebaRespon
 
 const clone = () => structuredClone(fixture)
 const sentence = (over = {}) => ({ id: 1, text: '猫が寝ている。', lang: 'jpn', license: 'CC BY 2.0 FR', ...over })
-const translation = (over = {}) => ({ id: 2, text: 'Le chat dort.', lang: 'fra', is_direct: true, ...over })
+const translation = (over = {}) => ({ id: 2, text: 'Le chat dort.', lang: 'fra', license: 'CC BY 2.0 FR', is_direct: true, ...over })
 const response = (main, translations) => ({ data: [{ ...main, translations }] })
 
 describe('randomSentenceUrl', () => {
@@ -53,6 +53,8 @@ describe('parseTatoebaResponse', () => {
       translation({ id: 7, lang: 'eng', text: 42 }),
       translation({ id: 8, lang: 'en<b>', text: 'Bad language code.' }),
       translation({ id: 9, lang: 'deu', text: '   ' }),
+      translation({ id: 10, lang: 'deu', is_unapproved: true }),
+      translation({ id: 11, lang: 'deu', license: null }),
     ]))
     expect(items.map((i) => i.id)).toEqual([1])
   })
@@ -60,6 +62,10 @@ describe('parseTatoebaResponse', () => {
     const evil = '<img src=x onerror=alert(1)>'
     const items = parseTatoebaResponse(response(sentence(), [translation({ text: evil })]))
     expect(items[1].text).toBe(evil)
+  })
+  test('trims before checking the length', () => {
+    const text = ' ' + 'x'.repeat(MAX_TEXT_LENGTH) + ' '
+    expect(parseTatoebaResponse(response(sentence(), [translation({ text })]))[1].text).toHaveLength(MAX_TEXT_LENGTH)
   })
   test('MAX_TEXT_LENGTH is 300', () => expect(MAX_TEXT_LENGTH).toBe(300))
 })
@@ -75,6 +81,10 @@ describe('fetchRandomSentences', () => {
   })
   test('network failures become a TatoebaError', async () => {
     await expect(fetchRandomSentences(async () => { throw new TypeError('offline') })).rejects.toThrow(TatoebaError)
+  })
+  test('a timeout becomes a friendly TatoebaError', async () => {
+    const fetchFn = async () => { throw new DOMException('slow', 'TimeoutError') }
+    await expect(fetchRandomSentences(fetchFn)).rejects.toThrow('taking too long')
   })
   test('a non-JSON page becomes a TatoebaError', async () => {
     const fetchFn = async () => ({ ok: true, status: 200, json: async () => { throw new SyntaxError('bad') } })

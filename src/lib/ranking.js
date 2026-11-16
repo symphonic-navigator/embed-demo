@@ -14,7 +14,7 @@ export function rankBySimilarity(query, items) {
 // would get almost the same share. Dividing by a small temperature T stretches
 // the differences: low T gives the winner nearly everything, high T flattens.
 // Subtracting the maximum first changes nothing mathematically but keeps
-// exp() from overflowing.
+// exp() from overflowing. T must be > 0 (the slider starts at 0.02).
 export function softmax(similarities, temperature) {
   if (similarities.length === 0) return []
   const max = Math.max(...similarities)

@@ -7,7 +7,7 @@ describe('angleDegrees', () => {
     expect(angleDegrees(0)).toBeCloseTo(90, 9)
     expect(angleDegrees(-1)).toBeCloseTo(180, 9)
   })
-  test('cos(34.92°) ≈ 0.82', () => expect(angleDegrees(0.82)).toBeCloseTo(34.92, 2))
+  test('cos(34.915°) ≈ 0.82', () => expect(angleDegrees(0.82)).toBeCloseTo(34.915, 3))
   test('rounding slightly above 1 does not give NaN', () => expect(angleDegrees(1.0000001)).toBe(0))
 })
 
