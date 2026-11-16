@@ -13,7 +13,7 @@ from tokenizers import Tokenizer
 
 QUERY_PREFIX = "query: "
 PASSAGE_PREFIX = "passage: "
-MAX_TOKENS = 512  # longer texts are truncated; the UI says so
+MAX_TOKENS = 256  # longer texts are truncated (and the UI says so): 512 tokens take about 50 s on single-threaded WASM
 
 
 def load_tokenizer(model_dir: Path) -> Tokenizer:
