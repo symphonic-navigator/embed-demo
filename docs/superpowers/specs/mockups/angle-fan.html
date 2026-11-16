@@ -1,0 +1,83 @@
+<h2>Angle fan: query and results in exact angles</h2>
+<p class="subtitle">Draft. Move the mouse over a point or a row. The angle to the query is exact. The angles between two results are not meaningful.</p>
+
+<style>
+  .af { display:grid; grid-template-columns: 1fr 360px; gap:20px; font-family: system-ui, sans-serif; }
+  .af svg { width:100%; height:auto; }
+  .af .pt { cursor:pointer; transition: r .15s; }
+  .af .row { padding:7px 10px; border-radius:8px; cursor:pointer; font-size:14px; display:flex; justify-content:space-between; gap:8px; }
+  .af .row:hover, .af .row.on { background:#2a9d8f22; }
+  .af .row small { opacity:.6; display:block; font-size:11px; }
+  .af .num { font-variant-numeric: tabular-nums; white-space:nowrap; opacity:.8; }
+  .af .info { margin-top:12px; padding:12px; border-left:3px solid #2a9d8f; background:#2a9d8f11; border-radius:4px; font-size:14px; line-height:1.5; min-height:72px; }
+  .af text { font-family: system-ui, sans-serif; }
+</style>
+
+<div class="af">
+  <div>
+    <svg id="fan" viewBox="-40 -440 520 470"></svg>
+    <div class="info" id="info">Hover over a result.</div>
+  </div>
+  <div id="rows"></div>
+</div>
+
+<script>
+(() => {
+  const docs = [
+    ["猫が日向で眠っている。", "Un chat dort au soleil.", 0.82],
+    ["子猫がソファの上で丸くなっている。", "Un chaton est roulé en boule sur le canapé.", 0.71],
+    ["犬が庭で昼寝をしている。", "Un chien fait la sieste dans le jardin.", 0.63],
+    ["今日はとても暑くて晴れている。", "Aujourd'hui il fait très chaud et beau.", 0.52],
+    ["私はコーヒーを飲みながら本を読む。", "Je lis un livre en buvant un café.", 0.38],
+    ["駅までバスで行きます。", "Je vais à la gare en bus.", 0.29],
+    ["税金の申告は三月までです。", "La déclaration d'impôts est à faire avant mars.", 0.21],
+    ["明日の会議は十時からです。", "La réunion de demain commence à dix heures.", 0.18],
+  ];
+  const R = 400, ns = 'http://www.w3.org/2000/svg';
+  const svg = document.getElementById('fan');
+  const el = (t, a) => { const e = document.createElementNS(ns, t); for (const k in a) e.setAttribute(k, a[k]); return e; };
+  const xy = (deg, r = R) => [r * Math.cos(deg * Math.PI / 180), -r * Math.sin(deg * Math.PI / 180)];
+
+  // quarter circle with degree ticks
+  svg.appendChild(el('path', { d: `M ${R} 0 A ${R} ${R} 0 0 0 0 ${-R}`, fill: 'none', stroke: '#8885', 'stroke-width': 1.5 }));
+  for (let d = 0; d <= 90; d += 15) {
+    const [x1, y1] = xy(d, R - 6), [x2, y2] = xy(d, R + 6), [tx, ty] = xy(d, R + 24);
+    svg.appendChild(el('line', { x1, y1, x2, y2, stroke: '#8887' }));
+    const t = el('text', { x: tx, y: ty + 4, 'text-anchor': 'middle', 'font-size': 12, fill: '#888' }); t.textContent = d + '°'; svg.appendChild(t);
+  }
+  svg.appendChild(el('line', { x1: 0, y1: 0, x2: 0, y2: -R, stroke: '#8883', 'stroke-dasharray': '4 4' }));
+  const t90 = el('text', { x: 8, y: -R / 2, 'font-size': 11, fill: '#888' }); t90.textContent = '90° = unrelated (cos = 0)'; svg.appendChild(t90);
+
+  const arc = el('path', { fill: '#2a9d8f22', stroke: '#2a9d8f', 'stroke-width': 2 }); svg.appendChild(arc);
+  const arcLbl = el('text', { 'font-size': 14, 'font-weight': 700, fill: '#2a9d8f' }); svg.appendChild(arcLbl);
+  const ray = el('line', { x1: 0, y1: 0, stroke: '#2a9d8f', 'stroke-width': 2.5, opacity: 0 }); svg.appendChild(ray);
+
+  // query along the x-axis
+  svg.appendChild(el('line', { x1: 0, y1: 0, x2: R, y2: 0, stroke: '#e76f51', 'stroke-width': 3 }));
+  svg.appendChild(el('circle', { cx: R, cy: 0, r: 9, fill: '#e76f51' }));
+  const ql = el('text', { x: R - 4, y: 22, 'text-anchor': 'end', 'font-size': 13, fill: '#e76f51', 'font-weight': 700 }); ql.textContent = 'query: “un chat qui dort au soleil”'; svg.appendChild(ql);
+  svg.appendChild(el('circle', { cx: 0, cy: 0, r: 4, fill: '#888' }));
+
+  const rows = document.getElementById('rows'), info = document.getElementById('info');
+  const pts = [];
+  docs.forEach((d, i) => {
+    const deg = Math.acos(d[2]) * 180 / Math.PI;
+    const [x, y] = xy(deg);
+    const c = el('circle', { cx: x, cy: y, r: 7, fill: '#2a9d8f', class: 'pt' }); svg.appendChild(c); pts.push(c);
+    const row = document.createElement('div'); row.className = 'row';
+    row.innerHTML = `<div>${d[0]}<small>${d[1]}</small></div><div class="num">${deg.toFixed(0)}° · ${d[2].toFixed(2)}</div>`;
+    rows.appendChild(row);
+    const on = () => {
+      pts.forEach(p => { p.setAttribute('r', 7); p.setAttribute('opacity', .35); });
+      c.setAttribute('r', 11); c.setAttribute('opacity', 1);
+      [...rows.children].forEach(r => r.classList.remove('on')); row.classList.add('on');
+      const a = 120, [ax, ay] = xy(deg, a);
+      arc.setAttribute('d', `M 0 0 L ${a} 0 A ${a} ${a} 0 0 0 ${ax} ${ay} Z`);
+      const [lx, ly] = xy(deg / 2, a + 40); arcLbl.setAttribute('x', lx); arcLbl.setAttribute('y', ly + 5); arcLbl.textContent = deg.toFixed(0) + '°';
+      ray.setAttribute('x2', x); ray.setAttribute('y2', y); ray.setAttribute('opacity', 1);
+      info.innerHTML = `<b>${d[0]}</b> <span style="opacity:.6">(${d[1]})</span><br>Angle to the query: <b>${deg.toFixed(1)}°</b> → cos(${deg.toFixed(1)}°) = <b>${d[2].toFixed(2)}</b> = similarity.<br><span style="opacity:.7">Smaller angle → points in the same direction → similar meaning.</span>`;
+    };
+    c.addEventListener('mouseenter', on); row.addEventListener('mouseenter', on);
+  });
+})();
+</script>

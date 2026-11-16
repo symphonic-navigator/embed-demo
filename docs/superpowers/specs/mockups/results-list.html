@@ -1,0 +1,102 @@
+<h2>Ergebnisliste mit k- und p-Grenzlinie</h2>
+<p class="subtitle">Klickbarer Entwurf: Zieh an den Reglern. Die Daten sind erfunden, aber realistisch. Die Texte sind japanisch, die Suche ist französisch.</p>
+
+<style>
+  .pg { font-family: system-ui, sans-serif; max-width: 860px; }
+  .pg .query { display:flex; gap:8px; align-items:center; margin-bottom:14px; }
+  .pg .query input { flex:1; padding:10px 12px; font-size:16px; border:1px solid #8884; border-radius:8px; background:transparent; color:inherit; }
+  .pg .controls { display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; margin-bottom:18px; padding:12px; border:1px solid #8883; border-radius:10px; }
+  .pg .controls label { display:block; font-size:13px; opacity:.8; }
+  .pg .controls b { font-variant-numeric: tabular-nums; }
+  .pg .controls input[type=range] { width:100%; }
+  .pg .hint { font-size:12px; opacity:.65; margin-top:4px; line-height:1.35; }
+  .pg .row { display:grid; grid-template-columns: 34px 1fr 150px; gap:10px; align-items:center; padding:9px 10px; border-radius:8px; transition: opacity .2s, filter .2s; }
+  .pg .row.out { opacity:.38; filter: grayscale(1); }
+  .pg .rank { font-weight:700; opacity:.6; text-align:right; }
+  .pg .ja { font-size:17px; }
+  .pg .fr { font-size:12px; opacity:.6; }
+  .pg .why { display:inline-block; font-size:11px; padding:1px 7px; border-radius:99px; margin-left:6px; border:1px solid currentColor; opacity:1; }
+  .pg .why.k { color:#d9822b; } .pg .why.p { color:#7b61ff; } .pg .why.kp { color:#c0392b; }
+  .pg .bars { font-size:11px; font-variant-numeric: tabular-nums; }
+  .pg .bar { height:6px; border-radius:3px; background:#8882; margin:2px 0 4px; overflow:hidden; }
+  .pg .bar > span { display:block; height:100%; }
+  .pg .bar.sim > span { background:#2a9d8f; } .pg .bar.prob > span { background:#7b61ff; }
+  .pg .line { position:relative; height:0; margin:4px 0; border-top:2px dashed; }
+  .pg .line span { position:absolute; right:0; top:-10px; font-size:11px; padding:0 6px; border-radius:4px; background: var(--bg-primary, #fff); }
+  .pg .line.k { border-color:#d9822b; color:#d9822b; } .pg .line.p { border-color:#7b61ff; color:#7b61ff; }
+  .pg .note { margin-top:18px; font-size:13px; line-height:1.5; padding:12px; border-left:3px solid #7b61ff; background:#7b61ff11; border-radius:4px; }
+</style>
+
+<div class="pg">
+  <div class="query"><input value="un chat qui dort au soleil" readonly><span class="label">Suche</span></div>
+
+  <div class="controls">
+    <div>
+      <label>top-k: <b id="kv"></b></label>
+      <input id="k" type="range" min="1" max="8" value="4">
+      <div class="hint">„Nur die besten k eines Jahrgangs.“ Feste Anzahl, egal wie gut sie sind.</div>
+    </div>
+    <div>
+      <label>top-p: <b id="pv"></b></label>
+      <input id="p" type="range" min="0.05" max="1" step="0.01" value="0.80">
+      <div class="hint">„So viele, bis zusammen p der Wahrscheinlichkeit erreicht ist.“ Passt sich an, je nachdem, wie klar die Sieger sind.</div>
+    </div>
+    <div>
+      <label>Temperatur: <b id="tv"></b></label>
+      <input id="t" type="range" min="0.02" max="0.5" step="0.01" value="0.08">
+      <div class="hint">Niedrig: Der Erste bekommt fast alles. Hoch: alle fast gleich. Das verschiebt die p-Linie.</div>
+    </div>
+  </div>
+
+  <div id="list"></div>
+
+  <div class="note">
+    <b>Analogie für die Erklärseite (mein Vorschlag):</b><br>
+    <b>top-k</b> = „Nur die 10 Besten des Jahrgangs bekommen einen Platz.“ Das hängt nur vom Rang ab.<br>
+    <b>Mindest-Ähnlichkeit</b> (optional als dritte Linie) = „Mindestens Notenschnitt 3,0.“ Das ist eine feste Schwelle.<br>
+    <b>top-p</b> = „Die Besten werden so lange aufgenommen, bis sie zusammen 80 % aller Punkte haben.“ Ist ein Jahrgang eindeutig, kommen wenige rein. Ist er knapp, kommen viele rein. <i>Das</i> ist der Aha-Moment, denn genauso funktioniert top-p beim Sampling in LLMs.
+  </div>
+</div>
+
+<script>
+(() => {
+  const docs = [
+    ["猫が日向で眠っている。", "Un chat dort au soleil.", 0.82],
+    ["子猫がソファの上で丸くなっている。", "Un chaton est roulé en boule sur le canapé.", 0.71],
+    ["犬が庭で昼寝をしている。", "Un chien fait la sieste dans le jardin.", 0.63],
+    ["今日はとても暑くて晴れている。", "Aujourd'hui il fait très chaud et beau.", 0.52],
+    ["私はコーヒーを飲みながら本を読む。", "Je lis un livre en buvant un café.", 0.38],
+    ["駅までバスで行きます。", "Je vais à la gare en bus.", 0.29],
+    ["税金の申告は三月までです。", "La déclaration d'impôts est à faire avant mars.", 0.21],
+    ["明日の会議は十時からです。", "La réunion de demain commence à dix heures.", 0.18],
+  ];
+  const $ = id => document.getElementById(id);
+  function render() {
+    const k = +$('k').value, p = +$('p').value, T = +$('t').value;
+    $('kv').textContent = k; $('pv').textContent = p.toFixed(2); $('tv').textContent = T.toFixed(2);
+    const ex = docs.map(d => Math.exp(d[2] / T)); const Z = ex.reduce((a, b) => a + b, 0);
+    let cum = 0, pCut = docs.length;
+    const probs = ex.map(e => e / Z);
+    for (let i = 0; i < probs.length; i++) { cum += probs[i]; if (cum >= p - 1e-9) { pCut = i + 1; break; } }
+    let html = '';
+    docs.forEach((d, i) => {
+      const r = i + 1, outK = r > k, outP = r > pCut;
+      const why = outK && outP ? '<span class="why kp">k und p zu niedrig</span>'
+                : outK ? '<span class="why k">k zu niedrig</span>'
+                : outP ? '<span class="why p">p zu niedrig</span>' : '';
+      html += `<div class="row ${outK || outP ? 'out' : ''}">
+        <div class="rank">${r}</div>
+        <div><div class="ja">${d[0]} ${why}</div><div class="fr">${d[1]}</div></div>
+        <div class="bars">Ähnlichkeit ${d[2].toFixed(2)}<div class="bar sim"><span style="width:${d[2]*100}%"></span></div>
+          Anteil ${(probs[i]*100).toFixed(1)} %<div class="bar prob"><span style="width:${probs[i]*100}%"></span></div></div>
+      </div>`;
+      if (r === k && r === pCut) html += '<div class="line k"><span>k-Grenze &amp; p-Grenze</span></div>';
+      else if (r === k) html += `<div class="line k"><span>k-Grenze (k = ${k})</span></div>`;
+      else if (r === pCut) html += `<div class="line p"><span>p-Grenze (p = ${p.toFixed(2)})</span></div>`;
+    });
+    $('list').innerHTML = html;
+  }
+  ['k', 'p', 't'].forEach(id => $(id).addEventListener('input', render));
+  render();
+})();
+</script>
