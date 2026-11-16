@@ -14,3 +14,6 @@ __pycache__/
 # Obsidian state
 obsidian/.obsidian/workspace*.json
 obsidian/.obsidian/cache
+
+.env
+test-results/

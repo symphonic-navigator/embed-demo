@@ -9,6 +9,7 @@ dependencies = [
     "onnx-ir>=1.1.0",
     "onnxruntime>=1.32.0",
     "sentence-transformers>=6.3.0",
+    "tokenizers>=0.23.3",
     "torch>=2.15.0",
     "transformers>=5.23.0",
 ]

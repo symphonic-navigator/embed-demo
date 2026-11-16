@@ -52,12 +52,15 @@ def main() -> None:
     parser.add_argument("--bits", type=int, choices=[4, 8], default=4)
     parser.add_argument("--block-size", type=int, default=32)
     parser.add_argument("--out", type=Path, default=Path(__file__).parent / "out")
+    parser.add_argument("--work", type=Path, default=Path(__file__).parent / "out-src",
+                        help="where the fp32 source is downloaded (about 4.6 GB, delete afterwards)")
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
 
     print(f"Downloading {ONNX_REPO}@{ONNX_REVISION[:8]} (fp32, about 4.6 GB)…")
-    src = hf_hub_download(ONNX_REPO, "model.onnx", revision=ONNX_REVISION)
-    hf_hub_download(ONNX_REPO, "model.onnx.data", revision=ONNX_REVISION)
+    # A real folder rather than the HF cache: onnx refuses symlinked external data.
+    src = hf_hub_download(ONNX_REPO, "model.onnx", revision=ONNX_REVISION, local_dir=args.work)
+    hf_hub_download(ONNX_REPO, "model.onnx.data", revision=ONNX_REVISION, local_dir=args.work)
 
     for name in BASE_FILES:
         shutil.copy(hf_hub_download(BASE_REPO, name, revision=BASE_REVISION), args.out / name)

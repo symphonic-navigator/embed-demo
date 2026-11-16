@@ -82,6 +82,7 @@ dependencies = [
     { name = "onnx-ir" },
     { name = "onnxruntime" },
     { name = "sentence-transformers" },
+    { name = "tokenizers" },
     { name = "torch", version = "2.15.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
     { name = "torch", version = "2.15.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
     { name = "transformers" },
@@ -95,6 +96,7 @@ requires-dist = [
     { name = "onnx-ir", specifier = ">=1.1.0" },
     { name = "onnxruntime", specifier = ">=1.32.0" },
     { name = "sentence-transformers", specifier = ">=6.3.0" },
+    { name = "tokenizers", specifier = ">=0.23.3" },
     { name = "torch", specifier = ">=2.15.0", index = "https://download.pytorch.org/whl/cpu" },
     { name = "transformers", specifier = ">=5.23.0" },
 ]
