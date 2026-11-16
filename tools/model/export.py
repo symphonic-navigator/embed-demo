@@ -2,7 +2,8 @@
 
 Downloads the community fp32 ONNX export of nvidia/Nemotron-3-Embed-1B-BF16
 (validated against the original model by validate.py), quantises its weights
-to 4-bit (or 8-bit) blocks with ONNX Runtime's MatMulNBits quantiser and writes
+(by default 8-bit MatMulNBits blocks and an int8 embedding table; every 4-bit
+variant failed validate.py) and writes
 everything the browser needs into one folder, ready for `hf upload`:
 
     model.onnx              quantised graph with weights inside (single file)
@@ -10,6 +11,7 @@ everything the browser needs into one folder, ready for `hf upload`:
     tokenizer_config.json
     config.json             model configuration (for reference)
     LICENSE, NOTICE         licence text and notices required by OpenMDW-1.1
+    README.md               the model card (from model-card.md)
     build-info.json         source revisions, quantisation settings, SHA-256
 
 The graph outputs `last_hidden_state`; mean pooling and L2 normalisation
@@ -113,6 +115,7 @@ def main() -> None:
 
     for name in BASE_FILES:
         shutil.copy(hf_hub_download(BASE_REPO, name, revision=BASE_REVISION), args.out / name)
+    shutil.copy(Path(__file__).parent / "model-card.md", args.out / "README.md")
 
     print("Loading the fp32 graph…")
     model = onnx.load(src)
