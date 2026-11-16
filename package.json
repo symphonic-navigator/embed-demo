@@ -10,7 +10,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "serve-model": "node scripts/serve-model.mjs"
   },
   "dependencies": {
     "@huggingface/tokenizers": "^0.2.0",
