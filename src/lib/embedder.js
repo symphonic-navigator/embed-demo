@@ -29,6 +29,7 @@ export function createEmbedder({ cacheName, onProgress, onPreparing, onReady, on
 
   return {
     load: () => worker.postMessage({ type: 'load', cacheName }),
+    terminate: () => worker.terminate(),
     // kind: 'query' or 'passage'. onItem(done, total) reports batch progress.
     embed(texts, kind, onItem) {
       const id = nextId++
