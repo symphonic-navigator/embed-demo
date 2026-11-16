@@ -1,6 +1,6 @@
 # Open items for Chris
 
-Embedding playground, overnighter run of 2026-11-16. Pull request: PR_LINK
+Embedding playground, overnighter run of 2026-11-16. Pull request: https://github.com/symphonic-navigator/embed-demo/pull/1
 
 1. **Upload the model** to `SCAI-NGO/nemotron-3-embed-1b-onnx-web` by following [`docs/hf-upload.md`](docs/hf-upload.md)
    (export, validate, `hf auth login` with a fine-grained token, `hf upload`, CORS check). Until then the deployed
