@@ -1,0 +1,117 @@
+{
+ "explainedVariance": 0.435,
+ "points": [
+  {
+   "group": "a cat asleep",
+   "lang": "jpn",
+   "text": "猫が眠っている。",
+   "x": -0.0671,
+   "y": 0.0656
+  },
+  {
+   "group": "a cat asleep",
+   "lang": "fra",
+   "text": "Le chat dort.",
+   "x": 0.1819,
+   "y": -0.0735
+  },
+  {
+   "group": "a cat asleep",
+   "lang": "deu",
+   "text": "Die Katze schläft.",
+   "x": 0.1045,
+   "y": 0.1021
+  },
+  {
+   "group": "a cat asleep",
+   "lang": "eng",
+   "text": "The cat is asleep.",
+   "x": 0.1089,
+   "y": 0.0213
+  },
+  {
+   "group": "rain",
+   "lang": "jpn",
+   "text": "外は雨が降っている。",
+   "x": -0.7349,
+   "y": -0.6581
+  },
+  {
+   "group": "rain",
+   "lang": "fra",
+   "text": "Il pleut dehors.",
+   "x": -0.5145,
+   "y": -0.6825
+  },
+  {
+   "group": "rain",
+   "lang": "deu",
+   "text": "Draußen regnet es.",
+   "x": -0.6025,
+   "y": -0.6895
+  },
+  {
+   "group": "rain",
+   "lang": "eng",
+   "text": "It is raining outside.",
+   "x": -0.653,
+   "y": -0.8482
+  },
+  {
+   "group": "coffee",
+   "lang": "jpn",
+   "text": "私はコーヒーが好きです。",
+   "x": 0.8745,
+   "y": -0.0819
+  },
+  {
+   "group": "coffee",
+   "lang": "fra",
+   "text": "J'aime le café.",
+   "x": 0.816,
+   "y": -0.12
+  },
+  {
+   "group": "coffee",
+   "lang": "deu",
+   "text": "Ich mag Kaffee.",
+   "x": 0.9458,
+   "y": -0.1338
+  },
+  {
+   "group": "coffee",
+   "lang": "eng",
+   "text": "I like coffee.",
+   "x": 1.0,
+   "y": -0.2747
+  },
+  {
+   "group": "a late train",
+   "lang": "jpn",
+   "text": "電車が遅れている。",
+   "x": -0.4123,
+   "y": 0.7474
+  },
+  {
+   "group": "a late train",
+   "lang": "fra",
+   "text": "Le train est en retard.",
+   "x": -0.3652,
+   "y": 0.8522
+  },
+  {
+   "group": "a late train",
+   "lang": "deu",
+   "text": "Der Zug hat Verspätung.",
+   "x": -0.3622,
+   "y": 0.9806
+  },
+  {
+   "group": "a late train",
+   "lang": "eng",
+   "text": "The train is late.",
+   "x": -0.3201,
+   "y": 0.793
+  }
+ ]
+}

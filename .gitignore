@@ -2,3 +2,18 @@
 .claude/worktrees/
 node_modules/
 dist/
+
+# Model build outputs (never commit weights)
+tools/model/out*/
+tools/model/.venv/
+*.onnx
+*.onnx.data
+*.safetensors
+__pycache__/
+
+# Obsidian state
+obsidian/.obsidian/workspace*.json
+obsidian/.obsidian/cache
+
+.env
+test-results/

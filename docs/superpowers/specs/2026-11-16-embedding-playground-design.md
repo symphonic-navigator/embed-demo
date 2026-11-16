@@ -62,7 +62,7 @@ Nobody presents it. People open the link on their own and explore. Learning happ
 - Persistence is **IndexedDB**.
 - Deployment: **GitHub Actions → GitHub Pages**.
 - The quantised model lives in the **Hugging Face model repository `SCAI-NGO/nemotron-3-embed-1b-onnx-web`** (already created by Chris; organisation-owned). It does not go on GitHub: Pages has a 100 MB per-file and 1 GB per-site limit and a soft limit of 100 GB of traffic per month (only about 100 first visits). Pages does not serve LFS files. GitHub release assets send no CORS header, which was verified on 2026-11-16, so the browser cannot fetch them.
-- **The upload is a manual step for Chris.** The builder writes a step-by-step guide (`docs/hf-upload.md`) and hands it over once the model files exist. The guide covers: creating the model repository, creating a write token, logging in with `hf auth login`, uploading with `hf upload`, the model card (base model, quantisation, licence and attribution as required by OpenMDW), and checking that the files are reachable from the browser. The model URL is a single config constant pointing at that repository. Install the CLI with `uv tool install huggingface_hub` (then `hf auth login`). A fine-grained token needs write access to SCAI-NGO repositories.
+- **The upload is a manual step for Chris.** The builder writes a step-by-step guide (`docs/hf-upload.md`) and hands it over once the model files exist. The repository already exists, so the guide covers: creating a write token, logging in with `hf auth login`, uploading with `hf upload`, the model card (base model, quantisation, licence and attribution as required by OpenMDW), and checking that the files are reachable from the browser. The model URL is a single config constant pointing at that repository. Install the CLI with `uv tool install huggingface_hub` (then `hf auth login`). A fine-grained token needs write access to SCAI-NGO repositories.
 - The browser caches the model after the first download (Cache API / browser cache), so later visits do not download it again.
 
 ### 5.2 First step: the ONNX spike (gate for everything else)
@@ -124,7 +124,7 @@ Search always runs against the **active tab only**.
 - Reference: the mock-up `docs/superpowers/specs/mockups/results-list.html`.
 
 ### 5.8 Angle fan (validated as a clickable mock-up)
-- A second view beside the results list. It sits side by side on desktop, and on mobile it is a collapsible section ("Show the angles"), collapsed by default.
+- A second view beside the results list. It sits side by side on wide viewports, and on narrow viewports (tablets, or phones after "Load anyway") it is a collapsible section ("Show the angles"), collapsed by default.
 - The query lies on the x-axis. Each result sits on the unit circle at θ = arccos(similarity). This is **exact**: any two vectors span a plane in which their angle is preserved.
 - Hovering a point or a list row (the two are linked both ways) highlights it, draws the angle arc and shows *"cos(35°) = 0.82 = similarity"*. 90° is labelled "unrelated".
 - Points that are greyed out in the list are greyed out in the fan too.
@@ -154,3 +154,31 @@ Short, visual, friendly sections, in this order:
 - Router or tabs for Explainer and Playground.
 - Test scope: unit tests (Vitest) for the maths (softmax/top-p cut, cosine, pooling, the k/p reason logic). No heavy end-to-end suite.
 - README (description, prerequisites, development setup, how the demo-set embeddings are regenerated) and the `obsidian` vault convention.
+
+## 7. End-to-end example
+
+1. Alex opens the GitHub Pages link on a laptop in Chrome. The Explainer appears straight away. Below it a status line reads "Loading the embedding model Nemotron-3-Embed-1B (int8) — have a look around…", and the progress bar starts filling.
+2. Alex reads about king − man + woman and about the cosine triangle. After three minutes the bar is full and "You can explore vector embeddings now" appears and pulses.
+3. Alex clicks it. The Playground opens on the **Demo set** tab: about 40 sentences, mostly Japanese, plus suggestion chips.
+4. Alex clicks the chip *"un chat qui dort"*. The status shows "Embedding your query… 0.8 s (GPU)". All demo sentences are listed by similarity, with `猫が日向で眠っている。` near the top. With k = 4 the k line sits under rank 4. The p line sits under rank 3, so rank 4 carries "p too low" and rank 5 and below carry "k and p too low".
+5. Alex raises the temperature. The softmax flattens, the p line moves down and rank 4 becomes active again. No new search runs.
+6. Alex hovers rank 1. In the angle fan the point lights up and the arc reads "cos(35°) = 0.82 = similarity".
+7. Alex switches to **My texts**, pastes a haiku and a dadaist poem, and clicks "Add & embed" twice. The progress is visible each time. Alex searches "autumn". After a reload of the page both texts are still there. "Clear all" empties the tab.
+8. On a phone, the same link shows only the Explainer and the note "For the interactive demo, please open this page on a computer." Nothing is downloaded.
+
+## 8. Out of scope
+
+- Uploading the model to Hugging Face (Chris does it manually by following `docs/hf-upload.md`).
+- Enabling GitHub Pages in the repository settings and the first deployment (Chris).
+- Chunking, file import (txt/pdf), editing entries, export/import of "My texts".
+- Any backend, analytics, telemetry, cookies, accounts.
+- Localising the UI (British English only).
+- A similarity-threshold line, and a playground that works before the model has fully loaded.
+
+## 9. Security boundary
+
+- There is no backend and there are no secrets. The app holds no credentials of any kind, and the Hugging Face token never enters the repository or the build.
+- Network access only to: the Hugging Face model repository (model files), the Tatoeba API (live sentences) and the site's own origin.
+- **All text is untrusted**, both what users paste and what the Tatoeba API returns. It is rendered as text only. There is no `dangerouslySetInnerHTML` and no HTML injection anywhere. Tatoeba responses are validated for shape and length before being stored.
+- User texts never leave the browser. They are not sent anywhere, and only embedded locally.
+- No third-party scripts or CDNs at runtime beyond the model download. Dependencies are bundled by Vite.

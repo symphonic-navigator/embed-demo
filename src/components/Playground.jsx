@@ -1,0 +1,190 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
+import demoSet from '../data/demo-set.json'
+import { DEFAULTS, DEMO_SUGGESTIONS } from '../data/suggestions.js'
+import { rankBySimilarity, softmax, topPCount } from '../lib/ranking.js'
+import { openStore } from '../lib/storage.js'
+import { useMediaQuery } from '../lib/useMediaQuery.js'
+import AngleFan from './AngleFan.jsx'
+import Controls from './Controls.jsx'
+import DemoSetTab from './DemoSetTab.jsx'
+import InferenceStatus from './InferenceStatus.jsx'
+import MyTextsTab from './MyTextsTab.jsx'
+import ResultsList from './ResultsList.jsx'
+
+const curated = demoSet.items.map((item) => ({ ...item, vector: Float32Array.from(item.vector) }))
+const curatedById = new Map(curated.map((item) => [item.sourceId, item]))
+const translationOf = (item) => (item.translationOf ? curatedById.get(item.translationOf) : null)
+const isCurated = (sourceId) => curatedById.has(sourceId)
+
+export default function Playground({ embedder, backend }) {
+  const [tab, setTab] = useState('demo')
+  const [store, setStore] = useState(null)
+  const [storeError, setStoreError] = useState(null)
+  const [entries, setEntries] = useState({ tatoeba: [], 'my-texts': [] })
+  const [query, setQuery] = useState('')
+  const [searched, setSearched] = useState(null) // { text, vector }
+  const [settings, setSettings] = useState(DEFAULTS)
+  const [hoveredId, setHoveredId] = useState(null)
+  const [busy, setBusy] = useState(null) // { label, since, done, total }
+  const [last, setLast] = useState(null) // { label, ms }
+  const [actionError, setActionError] = useState(null)
+  const locked = useRef(false)
+  const wide = useMediaQuery('(min-width: 1000px)')
+
+  useEffect(() => {
+    let opened
+    openStore()
+      .then(async (s) => {
+        opened = s
+        setStore(s)
+        setEntries({ tatoeba: await s.list('tatoeba'), 'my-texts': await s.list('my-texts') })
+      })
+      .catch(() => setStoreError('This browser does not let the page store anything, so adding texts is switched off.'))
+    return () => opened?.close()
+  }, [])
+
+  const refresh = async (collection) => {
+    const list = await store.list(collection)
+    setEntries((e) => ({ ...e, [collection]: list }))
+  }
+
+  // Every action (search, add, fetch, delete, reset) runs through here: one at
+  // a time, with visible state, and any failure becomes a message instead of a
+  // silently stuck button.
+  const perform = async (label, action) => {
+    if (locked.current) return
+    locked.current = true
+    setActionError(null)
+    setBusy({ label, since: performance.now(), done: 0, total: 1 })
+    try {
+      await action()
+    } catch (err) {
+      setActionError(`${label} failed: ${err?.message ?? err}`)
+    } finally {
+      locked.current = false
+      setBusy(null)
+    }
+  }
+
+  // Embeds texts inside a perform(), showing per-item progress.
+  const run = async (label, texts, kind) => {
+    const since = performance.now()
+    setBusy({ label, since, done: 0, total: texts.length })
+    const result = await embedder.embed(texts, kind, (done, total) => setBusy({ label, since, done, total }))
+    setLast({ label: texts.length > 1 ? `Embedding ${texts.length} texts` : label, ms: performance.now() - since })
+    return result
+  }
+
+  const search = (text) => {
+    const trimmed = text.trim()
+    if (!trimmed) return
+    setQuery(trimmed)
+    return perform('Embedding your query', async () => {
+      const { vectors } = await run('Embedding your query', [trimmed], 'query')
+      setSearched({ text: trimmed, vector: vectors[0] })
+    })
+  }
+
+  const items = useMemo(() => (tab === 'demo' ? [...curated, ...entries.tatoeba] : entries['my-texts']), [tab, entries])
+  // Re-ranks whenever the collection changes, without embedding the query again.
+  const results = useMemo(() => (searched ? rankBySimilarity(searched.vector, items) : []), [searched, items])
+  // Moving a slider only recomputes these, it never runs a new search.
+  const probabilities = useMemo(
+    () => softmax(results.map((r) => r.similarity), settings.temperature),
+    [results, settings.temperature],
+  )
+  const pCount = topPCount(probabilities, settings.p)
+
+  const tabProps = { store, entries, refresh, run, perform, isCurated, busy: Boolean(busy) }
+  const fan = searched && results.length ? (
+    <AngleFan
+      query={searched.text}
+      results={results}
+      k={settings.k}
+      pCount={pCount}
+      hoveredId={hoveredId}
+      onHover={setHoveredId}
+    />
+  ) : null
+
+  return (
+    <div className="playground">
+      <div className="tabs collection-tabs" role="tablist">
+        <button role="tab" aria-selected={tab === 'demo'} className={tab === 'demo' ? 'tab active' : 'tab'} onClick={() => setTab('demo')}>
+          Demo set
+        </button>
+        <button role="tab" aria-selected={tab === 'mine'} className={tab === 'mine' ? 'tab active' : 'tab'} onClick={() => setTab('mine')}>
+          My texts
+        </button>
+        <span className="muted">The search always runs against the active tab only.</span>
+      </div>
+
+      {storeError ? <p className="warning">{storeError}</p> : null}
+      {actionError ? (
+        <p className="warning" role="alert">
+          {actionError}
+        </p>
+      ) : null}
+      {tab === 'demo' ? <DemoSetTab {...tabProps} /> : <MyTextsTab {...tabProps} />}
+
+      <form
+        className="query"
+        onSubmit={(e) => {
+          e.preventDefault()
+          search(query)
+        }}
+      >
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by meaning, in any language…"
+          aria-label="Search query"
+        />
+        <button className="primary" type="submit" disabled={Boolean(busy) || !query.trim()}>
+          Search
+        </button>
+      </form>
+      {tab === 'demo' ? (
+        <div className="chips" aria-label="Suggested queries">
+          {DEMO_SUGGESTIONS.map((s) => (
+            <button key={s} className="chip" onClick={() => search(s)} disabled={Boolean(busy)}>
+              {s}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      <InferenceStatus busy={busy} last={last} backend={backend} />
+
+      <Controls {...settings} onChange={(change) => setSettings((s) => ({ ...s, ...change }))} />
+
+      {!searched ? (
+        <p className="muted">
+          {tab === 'demo' ? 'Click a suggestion or type a query to start.' : 'Type a query to search your texts.'}
+        </p>
+      ) : results.length === 0 ? (
+        <p className="muted">This tab has no texts yet, so there is nothing to rank.</p>
+      ) : (
+        <div className={wide ? 'results-layout wide' : 'results-layout'}>
+          <ResultsList
+            results={results}
+            probabilities={probabilities}
+            k={settings.k}
+            p={settings.p}
+            pCount={pCount}
+            hoveredId={hoveredId}
+            onHover={setHoveredId}
+            translationOf={translationOf}
+          />
+          {wide ? (
+            <div className="fan-column">{fan}</div>
+          ) : (
+            <details className="fan-details">
+              <summary>Show the angles</summary>
+              {fan}
+            </details>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
