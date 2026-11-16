@@ -1,0 +1,49 @@
+{
+  "data": [
+    {
+      "id": 149879,
+      "text": "自分の給料に満足しているよ。",
+      "lang": "jpn",
+      "script": null,
+      "license": "CC BY 2.0 FR",
+      "owner": null,
+      "is_unapproved": false,
+      "translations": [
+        {
+          "id": 128193,
+          "text": "Je suis satisfait de mon salaire.",
+          "lang": "fra",
+          "script": null,
+          "license": "CC BY 2.0 FR",
+          "owner": "sacredceltic",
+          "is_unapproved": false,
+          "is_direct": true
+        },
+        {
+          "id": 264679,
+          "text": "I'm content with my salary.",
+          "lang": "eng",
+          "script": null,
+          "license": "CC BY 2.0 FR",
+          "owner": "Eldad",
+          "is_unapproved": false,
+          "is_direct": true
+        },
+        {
+          "id": 689403,
+          "text": "Ich bin mit meinem Gehalt zufrieden.",
+          "lang": "deu",
+          "script": null,
+          "license": "CC BY 2.0 FR",
+          "owner": "Manfredo",
+          "is_unapproved": false,
+          "is_direct": false
+        }
+      ]
+    }
+  ],
+  "paging": {
+    "total": 98615,
+    "has_next": true
+  }
+}
