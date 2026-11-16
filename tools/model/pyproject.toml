@@ -1,0 +1,22 @@
+[project]
+name = "embed-demo-model"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "huggingface-hub>=2.4.0",
+    "numpy>=2.4.6",
+    "onnx>=1.23.2",
+    "onnx-ir>=1.1.0",
+    "onnxruntime>=1.32.0",
+    "sentence-transformers>=6.3.0",
+    "torch>=2.15.0",
+    "transformers>=5.23.0",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
