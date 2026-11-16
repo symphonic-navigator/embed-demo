@@ -154,3 +154,31 @@ Short, visual, friendly sections, in this order:
 - Router or tabs for Explainer and Playground.
 - Test scope: unit tests (Vitest) for the maths (softmax/top-p cut, cosine, pooling, the k/p reason logic). No heavy end-to-end suite.
 - README (description, prerequisites, development setup, how the demo-set embeddings are regenerated) and the `obsidian` vault convention.
+
+## 7. End-to-end example
+
+1. Alex opens the GitHub Pages link on a laptop in Chrome. The Explainer appears straight away. Below it a status line reads "Loading the embedding model Nemotron-3-Embed-1B (int8) — have a look around…", and the progress bar starts filling.
+2. Alex reads about king − man + woman and about the cosine triangle. After three minutes the bar is full and "You can explore vector embeddings now" appears and pulses.
+3. Alex clicks it. The Playground opens on the **Demo set** tab: about 40 sentences, mostly Japanese, plus suggestion chips.
+4. Alex clicks the chip *"un chat qui dort"*. The status shows "Embedding your query… 0.8 s (GPU)". All demo sentences are listed by similarity, with `猫が日向で眠っている。` near the top. With k = 4, rank 5 and below are greyed out with "k too low". The k line sits under rank 4 and the p line under rank 3. Rank 4 carries "p too low".
+5. Alex raises the temperature. The softmax flattens, the p line moves down and rank 4 becomes active again. No new search runs.
+6. Alex hovers rank 1. In the angle fan the point lights up and the arc reads "cos(35°) = 0.82 = similarity".
+7. Alex switches to **My texts**, pastes a haiku and a dadaist poem, and clicks "Add & embed" twice. The progress is visible each time. Alex searches "autumn". After a reload of the page both texts are still there. "Clear all" empties the tab.
+8. On a phone, the same link shows only the Explainer and the note "For the interactive demo, please open this page on a computer." Nothing is downloaded.
+
+## 8. Out of scope
+
+- Uploading the model to Hugging Face (Chris does it manually by following `docs/hf-upload.md`).
+- Enabling GitHub Pages in the repository settings and the first deployment (Chris).
+- Chunking, file import (txt/pdf), editing entries, export/import of "My texts".
+- Any backend, analytics, telemetry, cookies, accounts.
+- Localising the UI (British English only).
+- A similarity-threshold line, and a playground that works before the model has fully loaded.
+
+## 9. Security boundary
+
+- There is no backend and there are no secrets. The app holds no credentials of any kind, and the Hugging Face token never enters the repository or the build.
+- Network access only to: the Hugging Face model repository (model files), the Tatoeba API (live sentences) and the site's own origin.
+- **All text is untrusted**, both what users paste and what the Tatoeba API returns. It is rendered as text only. There is no `dangerouslySetInnerHTML` and no HTML injection anywhere. Tatoeba responses are validated for shape and length before being stored.
+- User texts never leave the browser. They are not sent anywhere, and only embedded locally.
+- No third-party scripts or CDNs at runtime beyond the model download. Dependencies are bundled by Vite.
