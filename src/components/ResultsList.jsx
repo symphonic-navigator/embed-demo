@@ -4,9 +4,9 @@ import { LANG_NAMES } from './labels.js'
 
 function Boundary({ kind, children }) {
   return (
-    <div className={`boundary ${kind}`} role="separator">
+    <li className={`boundary ${kind}`} role="separator">
       <span>{children}</span>
-    </div>
+    </li>
   )
 }
 
@@ -33,6 +33,7 @@ export default function ResultsList({ results, probabilities, k, p, pCount, hove
               className={`row${reason ? ' out' : ''}${hoveredId === item.id ? ' on' : ''}`}
               onMouseEnter={() => onHover(item.id)}
               onFocus={() => onHover(item.id)}
+              onBlur={() => onHover(null)}
               tabIndex={0}
               data-rank={rank}
             >

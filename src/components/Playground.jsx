@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import demoSet from '../data/demo-set.json'
 import { DEFAULTS, DEMO_SUGGESTIONS } from '../data/suggestions.js'
 import { rankBySimilarity, softmax, topPCount } from '../lib/ranking.js'
@@ -14,6 +14,7 @@ import ResultsList from './ResultsList.jsx'
 const curated = demoSet.items.map((item) => ({ ...item, vector: Float32Array.from(item.vector) }))
 const curatedById = new Map(curated.map((item) => [item.sourceId, item]))
 const translationOf = (item) => (item.translationOf ? curatedById.get(item.translationOf) : null)
+const isCurated = (sourceId) => curatedById.has(sourceId)
 
 export default function Playground({ embedder, backend }) {
   const [tab, setTab] = useState('demo')
@@ -26,15 +27,20 @@ export default function Playground({ embedder, backend }) {
   const [hoveredId, setHoveredId] = useState(null)
   const [busy, setBusy] = useState(null) // { label, since, done, total }
   const [last, setLast] = useState(null) // { label, ms }
+  const [actionError, setActionError] = useState(null)
+  const locked = useRef(false)
   const wide = useMediaQuery('(min-width: 1000px)')
 
   useEffect(() => {
+    let opened
     openStore()
       .then(async (s) => {
+        opened = s
         setStore(s)
         setEntries({ tatoeba: await s.list('tatoeba'), 'my-texts': await s.list('my-texts') })
       })
-      .catch(() => setStoreError('This browser does not let the page store anything, so added texts will not be kept.'))
+      .catch(() => setStoreError('This browser does not let the page store anything, so adding texts is switched off.'))
+    return () => opened?.close()
   }, [])
 
   const refresh = async (collection) => {
@@ -42,24 +48,41 @@ export default function Playground({ embedder, backend }) {
     setEntries((e) => ({ ...e, [collection]: list }))
   }
 
-  // Runs one embedding job with visible progress. Only one at a time.
-  const run = async (label, texts, kind) => {
-    const since = performance.now()
-    setBusy({ label, since, done: 0, total: texts.length })
+  // Every action (search, add, fetch, delete, reset) runs through here: one at
+  // a time, with visible state, and any failure becomes a message instead of a
+  // silently stuck button.
+  const perform = async (label, action) => {
+    if (locked.current) return
+    locked.current = true
+    setActionError(null)
+    setBusy({ label, since: performance.now(), done: 0, total: 1 })
     try {
-      return await embedder.embed(texts, kind, (done, total) => setBusy({ label, since, done, total }))
+      await action()
+    } catch (err) {
+      setActionError(`${label} failed: ${err?.message ?? err}`)
     } finally {
-      setLast({ label: texts.length > 1 ? `Embedding ${texts.length} texts` : label, ms: performance.now() - since })
+      locked.current = false
       setBusy(null)
     }
   }
 
-  const search = async (text) => {
+  // Embeds texts inside a perform(), showing per-item progress.
+  const run = async (label, texts, kind) => {
+    const since = performance.now()
+    setBusy({ label, since, done: 0, total: texts.length })
+    const result = await embedder.embed(texts, kind, (done, total) => setBusy({ label, since, done, total }))
+    setLast({ label: texts.length > 1 ? `Embedding ${texts.length} texts` : label, ms: performance.now() - since })
+    return result
+  }
+
+  const search = (text) => {
     const trimmed = text.trim()
-    if (!trimmed || busy) return
+    if (!trimmed) return
     setQuery(trimmed)
-    const { vectors } = await run('Embedding your query', [trimmed], 'query')
-    setSearched({ text: trimmed, vector: vectors[0] })
+    return perform('Embedding your query', async () => {
+      const { vectors } = await run('Embedding your query', [trimmed], 'query')
+      setSearched({ text: trimmed, vector: vectors[0] })
+    })
   }
 
   const items = useMemo(() => (tab === 'demo' ? [...curated, ...entries.tatoeba] : entries['my-texts']), [tab, entries])
@@ -72,7 +95,7 @@ export default function Playground({ embedder, backend }) {
   )
   const pCount = topPCount(probabilities, settings.p)
 
-  const tabProps = { store, entries, refresh, run, busy: Boolean(busy) }
+  const tabProps = { store, entries, refresh, run, perform, isCurated, busy: Boolean(busy) }
   const fan = searched && results.length ? (
     <AngleFan
       query={searched.text}
@@ -97,6 +120,11 @@ export default function Playground({ embedder, backend }) {
       </div>
 
       {storeError ? <p className="warning">{storeError}</p> : null}
+      {actionError ? (
+        <p className="warning" role="alert">
+          {actionError}
+        </p>
+      ) : null}
       {tab === 'demo' ? <DemoSetTab {...tabProps} /> : <MyTextsTab {...tabProps} />}
 
       <form

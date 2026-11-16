@@ -71,7 +71,7 @@ export default function AngleFan({ query, results, k, pCount, hoveredId, onHover
           )
         })}
       </svg>
-      <div className="fan-info" aria-live="polite">
+      <div className="fan-info">
         {hovered ? (
           <>
             <b>{hovered.item.text}</b>

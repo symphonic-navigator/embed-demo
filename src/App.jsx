@@ -13,6 +13,7 @@ const phone = isPhone()
 export default function App() {
   const [loadAnyway, setLoadAnyway] = useState(false)
   const [view, setView] = useState('explainer')
+  const [opened, setOpened] = useState(false) // stops the button pulsing
   const [model, setModel] = useState({ phase: 'idle', loaded: 0, total: 0 })
   const [embedder, setEmbedder] = useState(null)
   const shouldLoad = !phone || loadAnyway
@@ -40,6 +41,10 @@ export default function App() {
   }, [shouldLoad])
 
   const ready = model.phase === 'ready'
+  const openPlayground = () => {
+    setOpened(true)
+    setView('playground')
+  }
 
   return (
     <div className="app">
@@ -52,7 +57,7 @@ export default function App() {
             </button>
             <button
               className={view === 'playground' ? 'tab active' : 'tab'}
-              onClick={() => setView('playground')}
+              onClick={openPlayground}
               disabled={!ready}
               title={ready ? undefined : 'Available once the model has loaded'}
             >
@@ -63,11 +68,15 @@ export default function App() {
       </header>
 
       <main>
-        {view === 'explainer' || !ready ? (
-          <Explainer onOpenPlayground={ready ? () => setView('playground') : null} />
-        ) : (
-          <Playground embedder={embedder} backend={model.backend} />
-        )}
+        <div hidden={view === 'playground' && ready}>
+          <Explainer onOpenPlayground={ready ? openPlayground : null} />
+        </div>
+        {/* Stays mounted once opened, so query, results and sliders survive a visit to the Explainer. */}
+        {ready && opened ? (
+          <div hidden={view !== 'playground'}>
+            <Playground embedder={embedder} backend={model.backend} />
+          </div>
+        ) : null}
       </main>
 
       {phone && !loadAnyway ? (
@@ -78,7 +87,7 @@ export default function App() {
           </button>
         </div>
       ) : view === 'explainer' || !ready ? (
-        <LoadingStatus model={model} onOpen={() => setView('playground')} />
+        <LoadingStatus model={model} opened={opened} onOpen={openPlayground} />
       ) : null}
 
       <Footer />

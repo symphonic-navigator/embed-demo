@@ -5,7 +5,7 @@ import * as ort from 'onnxruntime-web/webgpu'
 import { Tokenizer } from '@huggingface/tokenizers'
 // Bundled by Vite, so onnxruntime-web never fetches its WebAssembly from a CDN.
 import wasmUrl from 'onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm?url'
-import { MAX_TOKENS, MODEL_BASE_URL, MODEL_FILES, PASSAGE_PREFIX, QUERY_PREFIX, CACHE_PREFIX } from '../config.js'
+import { CACHE_PREFIX, MAX_TOKENS, MODEL_BASE_URL, MODEL_FILES, MODEL_SIZE_BYTES, PASSAGE_PREFIX, QUERY_PREFIX } from '../config.js'
 import { createSession } from '../lib/backends.js'
 import { dropOtherCaches, fetchCached } from '../lib/modelCache.js'
 import { l2Normalise, meanPool, truncate } from '../lib/vector.js'
@@ -14,6 +14,15 @@ ort.env.wasm.wasmPaths = { wasm: wasmUrl }
 
 let session
 let tokenizer
+
+// At most ten progress messages a second: every one re-renders the page.
+let lastReport = 0
+function reportProgress(loaded, total) {
+  const now = performance.now()
+  if (now - lastReport < 100 && loaded < total) return
+  lastReport = now
+  postMessage({ type: 'progress', loaded, total })
+}
 
 const hex = (buffer) => [...new Uint8Array(buffer)].map((b) => b.toString(16).padStart(2, '0')).join('')
 const jsonFrom = (buffer) => JSON.parse(new TextDecoder().decode(buffer))
@@ -24,9 +33,7 @@ async function load(cacheName) {
   const [tokenizerJson, tokenizerConfig, modelBytes] = await Promise.all([
     fetchCached(url(MODEL_FILES.tokenizer), cacheName),
     fetchCached(url(MODEL_FILES.tokenizerConfig), cacheName),
-    fetchCached(url(MODEL_FILES.model), cacheName, (loaded, total) =>
-      postMessage({ type: 'progress', loaded, total }),
-    ),
+    fetchCached(url(MODEL_FILES.model), cacheName, reportProgress, MODEL_SIZE_BYTES),
   ])
   postMessage({ type: 'preparing' })
   tokenizer = new Tokenizer(jsonFrom(tokenizerJson), jsonFrom(tokenizerConfig))

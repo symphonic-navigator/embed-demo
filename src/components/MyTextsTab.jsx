@@ -4,30 +4,34 @@ import ThingsToTry from './ThingsToTry.jsx'
 
 const SOFT_LIMIT = 50
 
-export default function MyTextsTab({ store, entries, refresh, run, busy }) {
+export default function MyTextsTab({ store, entries, refresh, run, perform, busy }) {
   const [draft, setDraft] = useState('')
   const [truncatedHint, setTruncatedHint] = useState(false)
   const texts = entries['my-texts']
 
-  const add = async () => {
+  const add = () => {
     const text = draft.trim()
     if (!text) return
-    const { vectors, truncated } = await run('Embedding your text', [text], 'passage')
-    await store.add('my-texts', { text, vector: vectors[0], truncated: truncated[0] })
-    setTruncatedHint(truncated[0])
-    setDraft('')
-    await refresh('my-texts')
+    return perform('Embedding your text', async () => {
+      const { vectors, truncated } = await run('Embedding your text', [text], 'passage')
+      await store.add('my-texts', { text, vector: vectors[0], truncated: truncated[0] })
+      setTruncatedHint(truncated[0])
+      setDraft('')
+      await refresh('my-texts')
+    })
   }
 
-  const remove = async (id) => {
-    await store.remove(id)
-    await refresh('my-texts')
-  }
+  const remove = (id) =>
+    perform('Deleting', async () => {
+      await store.remove(id)
+      await refresh('my-texts')
+    })
 
-  const clearAll = async () => {
-    await store.clear('my-texts')
-    await refresh('my-texts')
-  }
+  const clearAll = () =>
+    perform('Clearing your texts', async () => {
+      await store.clear('my-texts')
+      await refresh('my-texts')
+    })
 
   return (
     <div className="tab-panel">

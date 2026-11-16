@@ -10,9 +10,14 @@ const root = resolve(process.env.MODEL_DIR ?? 'tools/model/out')
 const port = Number(process.env.PORT ?? 8765)
 
 createServer((req, res) => {
-  const name = decodeURIComponent(new URL(req.url, 'http://localhost').pathname)
-  const file = resolve(root, '.' + name)
   res.setHeader('Access-Control-Allow-Origin', '*')
+  let name
+  try {
+    name = decodeURIComponent(new URL(req.url, 'http://localhost').pathname)
+  } catch {
+    return res.writeHead(400).end()
+  }
+  const file = resolve(root, '.' + name)
   // Never serve anything outside the model folder.
   if (!file.startsWith(root + sep)) return res.writeHead(403).end()
   let size
@@ -25,5 +30,7 @@ createServer((req, res) => {
   }
   res.writeHead(200, { 'Content-Length': size, 'Content-Type': 'application/octet-stream' })
   if (req.method === 'HEAD') return res.end()
-  createReadStream(file).pipe(res)
-}).listen(port, () => console.log(`Serving ${root} at http://localhost:${port}/`))
+  createReadStream(file)
+    .on('error', () => res.destroy())
+    .pipe(res)
+}).listen(port, '127.0.0.1', () => console.log(`Serving ${root} at http://localhost:${port}/`))

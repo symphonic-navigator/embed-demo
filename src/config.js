@@ -12,6 +12,9 @@ export const MODEL_FILES = {
 
 export const MODEL_LABEL = 'Nemotron-3-Embed-1B (int8)'
 
+// Expected size of model.onnx, used when the server sends no Content-Length.
+export const MODEL_SIZE_BYTES = 1_252_692_075
+
 // Longer texts are cut to their first 256 tokens. On a CPU without threads,
 // 512 tokens take about 50 s, which feels broken. The UI says when it happens.
 export const MAX_TOKENS = 256

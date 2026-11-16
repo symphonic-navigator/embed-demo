@@ -27,6 +27,15 @@ export function createEmbedder({ cacheName, onProgress, onPreparing, onReady, on
     }
   }
 
+  // A crashed worker (out of memory, failed script) must not leave the page
+  // waiting forever.
+  worker.onerror = (event) => {
+    const error = new Error(event.message || 'The embedding worker stopped unexpectedly.')
+    for (const job of pending.values()) job.reject(error)
+    pending.clear()
+    onError?.(error)
+  }
+
   return {
     load: () => worker.postMessage({ type: 'load', cacheName }),
     terminate: () => worker.terminate(),

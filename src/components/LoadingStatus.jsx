@@ -1,10 +1,8 @@
-import { useState } from 'react'
 import { MODEL_LABEL } from '../config.js'
 import { formatBytes, formatSeconds } from '../lib/format.js'
 import { useTimer } from '../lib/useTimer.js'
 
-export default function LoadingStatus({ model, onOpen }) {
-  const [clicked, setClicked] = useState(false)
+export default function LoadingStatus({ model, opened, onOpen }) {
   const preparing = useTimer(model.phase === 'preparing' ? model.preparingSince : null)
 
   if (model.phase === 'error') {
@@ -21,11 +19,8 @@ export default function LoadingStatus({ model, onOpen }) {
     return (
       <div className="status-bar">
         <button
-          className={clicked ? 'primary' : 'primary pulse'}
-          onClick={() => {
-            setClicked(true)
-            onOpen()
-          }}
+          className={opened ? 'primary' : 'primary pulse'}
+          onClick={onOpen}
         >
           You can explore vector embeddings now
         </button>
@@ -43,7 +38,7 @@ export default function LoadingStatus({ model, onOpen }) {
           <span className="muted">
             {model.phase === 'idle'
               ? 'Starting…'
-              : model.total
+              : model.total && model.loaded <= model.total
                 ? `${formatBytes(model.loaded)} of ${formatBytes(model.total)}`
                 : formatBytes(model.loaded)}
           </span>

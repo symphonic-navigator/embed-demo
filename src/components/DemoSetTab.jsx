@@ -1,39 +1,44 @@
 import { useState } from 'react'
 import { fetchRandomSentences, TatoebaError } from '../lib/tatoeba.js'
 
-export default function DemoSetTab({ store, entries, refresh, run, busy }) {
+export default function DemoSetTab({ store, entries, refresh, run, perform, isCurated, busy }) {
   const [message, setMessage] = useState(null)
 
-  const fetchMore = async () => {
-    setMessage(null)
-    try {
-      const sentences = await fetchRandomSentences()
-      const fresh = []
-      for (const s of sentences) if (!(await store.hasSource('tatoeba', s.id))) fresh.push(s)
-      if (fresh.length === 0) {
-        setMessage('Those sentences are already in the set. Try again for different ones.')
-        return
+  const fetchMore = () =>
+    perform('Asking Tatoeba', async () => {
+      setMessage(null)
+      try {
+        await addFromTatoeba()
+      } catch (err) {
+        if (!(err instanceof TatoebaError)) throw err
+        setMessage(`${err.message} The demo set still works as it is.`)
       }
-      const { vectors } = await run('Embedding Tatoeba sentences', fresh.map((s) => s.text), 'passage')
-      for (let i = 0; i < fresh.length; i++) {
-        await store.add('tatoeba', { text: fresh[i].text, lang: fresh[i].lang, sourceId: fresh[i].id, vector: vectors[i] })
-      }
-      await refresh('tatoeba')
-      setMessage(`Added ${fresh.length} sentences from Tatoeba.`)
-    } catch (err) {
-      setMessage(
-        err instanceof TatoebaError
-          ? `${err.message} The demo set still works as it is.`
-          : 'Something went wrong while adding sentences. The demo set still works as it is.',
-      )
+    })
+
+  const addFromTatoeba = async () => {
+    const sentences = await fetchRandomSentences()
+    const fresh = []
+    for (const s of sentences) {
+      if (!isCurated(s.id) && !(await store.hasSource('tatoeba', s.id))) fresh.push(s)
     }
+    if (fresh.length === 0) {
+      setMessage('Those sentences are already in the set. Try again for different ones.')
+      return
+    }
+    const { vectors } = await run('Embedding Tatoeba sentences', fresh.map((s) => s.text), 'passage')
+    for (let i = 0; i < fresh.length; i++) {
+      await store.add('tatoeba', { text: fresh[i].text, lang: fresh[i].lang, sourceId: fresh[i].id, vector: vectors[i] })
+    }
+    await refresh('tatoeba')
+    setMessage(`Added ${fresh.length} sentences from Tatoeba.`)
   }
 
-  const reset = async () => {
-    await store.clear('tatoeba')
-    await refresh('tatoeba')
-    setMessage('The demo set is back to the curated sentences.')
-  }
+  const reset = () =>
+    perform('Resetting the demo set', async () => {
+      await store.clear('tatoeba')
+      await refresh('tatoeba')
+      setMessage('The demo set is back to the curated sentences.')
+    })
 
   return (
     <div className="tab-panel">

@@ -472,6 +472,7 @@ button:disabled {
 }
 
 .boundary {
+  list-style: none;
   position: relative;
   height: 0;
   margin: 10px 0;

@@ -11,8 +11,8 @@ export default function InferenceStatus({ busy, last, backend }) {
     const what =
       busy.total > 1 ? `Embedding ${Math.min(busy.done + 1, busy.total)} of ${busy.total}…` : `${busy.label}…`
     return (
-      <p className="inference busy" aria-live="polite">
-        <span className="spinner" aria-hidden="true" /> {what} {formatSeconds(elapsed)} ({where})
+      <p className="inference busy">
+        <span className="spinner" aria-hidden="true" /> <span role="status">{what}</span> {formatSeconds(elapsed)} ({where})
       </p>
     )
   }
